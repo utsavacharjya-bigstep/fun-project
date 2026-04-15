@@ -38,6 +38,7 @@
     window.addEventListener('resize', () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+      bird.targetX = canvas.width * 0.35;
       bird.y = canvas.height / 2;
       draw();
     });
@@ -62,13 +63,17 @@
 
     // Bird properties
     const bird = {
-      x: 150,
+      x: 100,
+      targetX: canvas.width * 0.35,
       y: canvas.height / 2,
       width: 100,
       height: 90,
       velocity: 0,
+      hVelocity: 0,
+      hFriction: 0.95,
       gravity: 0.3,
-      flapStrength: -8
+      flapStrength: -8,
+      hFlapStrength: 4.5
     };
 
     // Background scroll
@@ -104,8 +109,10 @@
     obstacleImg.onload = onAssetLoad;
 
     function resetGame() {
+      bird.x = 100;
       bird.y = canvas.height / 2;
       bird.velocity = 0;
+      bird.hVelocity = 0;
       pipes.length = 0;
       lastPipeTopHeight = null;
       score = 0;
@@ -123,6 +130,10 @@
           bgMusic.play();
         } else if (gameState === 'playing') {
           bird.velocity = bird.flapStrength;
+          // Boost horizontal velocity during glide phase
+          if (bird.x < bird.targetX) {
+            bird.hVelocity = bird.hFlapStrength;
+          }
         }
       }
       if (e.code === 'Enter') {
@@ -183,8 +194,50 @@
     function update(timestamp) {
       if (gameState !== 'playing') return;
 
-      // Scroll background at same speed as pipes
-      bgScrollX = (bgScrollX + pipeSpeed) % canvas.width;
+      const gliding = bird.x < bird.targetX;
+
+      // Apply horizontal velocity during glide
+      if (gliding) {
+        bird.x += bird.hVelocity;
+        bird.hVelocity *= bird.hFriction;
+      }
+
+      // Cap bird at target position
+      if (bird.x >= bird.targetX) {
+        bird.x = bird.targetX;
+        bird.hVelocity = 0;
+      }
+
+      // Scroll background only after glide phase
+      if (!gliding) {
+        bgScrollX = (bgScrollX + pipeSpeed) % canvas.width;
+      }
+
+      // Apply gravity always
+      bird.velocity += bird.gravity;
+      bird.y += bird.velocity;
+
+      // Clamp bird position
+      if (bird.y < 0) {
+        bird.y = 0;
+        bird.velocity = 0;
+      }
+      if (bird.y + bird.height > canvas.height) {
+        bird.y = canvas.height - bird.height;
+        bird.velocity = 0;
+      }
+
+      // Check collisions (floor/ceiling during glide, pipes + floor/ceiling after)
+      if (checkCollision()) {
+        gameState = 'gameover';
+        bgMusic.pause();
+        hitSound.currentTime = 0;
+        hitSound.play();
+        return;
+      }
+
+      // Don't spawn or move pipes during glide phase
+      if (gliding) return;
 
       // Spawn pipe if no pipes yet or last pipe is far enough away
       const lastPipe = pipes[pipes.length - 1];
@@ -208,27 +261,6 @@
         }
       }
 
-      // Apply gravity
-      bird.velocity += bird.gravity;
-      bird.y += bird.velocity;
-
-      // Clamp bird position
-      if (bird.y < 0) {
-        bird.y = 0;
-        bird.velocity = 0;
-      }
-      if (bird.y + bird.height > canvas.height) {
-        bird.y = canvas.height - bird.height;
-        bird.velocity = 0;
-      }
-
-      // Check collisions
-      if (checkCollision()) {
-        gameState = 'gameover';
-        bgMusic.pause();
-        hitSound.currentTime = 0;
-        hitSound.play();
-      }
     }
 
     function draw() {
