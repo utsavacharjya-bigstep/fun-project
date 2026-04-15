@@ -126,6 +126,7 @@
         if (gameState === 'idle') {
           gameState = 'playing';
           bird.velocity = bird.flapStrength;
+          bird.hVelocity = bird.hFlapStrength;
           bgMusic.currentTime = 0;
           bgMusic.play();
         } else if (gameState === 'playing') {
