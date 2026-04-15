@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flappy Bird</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Game dimensions - match window size
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      bird.y = canvas.height / 2;
+      draw();
+    });
+
+    // Load assets
+    const bgImg = new Image();
+    bgImg.src = 'background.jpg';
+
+    const birdImg = new Image();
+    birdImg.src = 'bird.jpg';
+
+    // Bird properties
+    const bird = {
+      x: 100,
+      y: canvas.height / 2,
+      width: 45,
+      height: 35
+    };
+
+    // Track loaded assets
+    let assetsLoaded = 0;
+    const totalAssets = 2;
+
+    function onAssetLoad() {
+      assetsLoaded++;
+      if (assetsLoaded >= totalAssets) {
+        draw();
+      }
+    }
+
+    bgImg.onload = onAssetLoad;
+    birdImg.onload = onAssetLoad;
+
+    function draw() {
+      // Draw background scaled to canvas
+      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+
+      // Draw bird
+      ctx.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
+    }
+  </script>
+</body>
+</html>
