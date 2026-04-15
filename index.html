@@ -64,12 +64,15 @@
     const bird = {
       x: 150,
       y: canvas.height / 2,
-      width: 45,
-      height: 35,
+      width: 60,
+      height: 45,
       velocity: 0,
       gravity: 0.3,
       flapStrength: -8
     };
+
+    // Background scroll
+    let bgScrollX = 0;
 
     // Pipe properties
     const pipes = [];
@@ -106,6 +109,7 @@
       pipes.length = 0;
       lastPipeTopHeight = null;
       score = 0;
+      bgScrollX = 0;
     }
 
     // Input
@@ -179,6 +183,9 @@
     function update(timestamp) {
       if (gameState !== 'playing') return;
 
+      // Scroll background at same speed as pipes
+      bgScrollX = (bgScrollX + pipeSpeed) % canvas.width;
+
       // Spawn pipe if no pipes yet or last pipe is far enough away
       const lastPipe = pipes[pipes.length - 1];
       if (!lastPipe || lastPipe.x < canvas.width - pipeMinDistance) {
@@ -225,8 +232,9 @@
     }
 
     function draw() {
-      // Draw background scaled to canvas
-      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      // Draw scrolling background (two copies side by side for seamless loop)
+      ctx.drawImage(bgImg, -bgScrollX, 0, canvas.width, canvas.height);
+      ctx.drawImage(bgImg, canvas.width - bgScrollX, 0, canvas.width, canvas.height);
 
       // Draw pipes
       for (const pipe of pipes) {
