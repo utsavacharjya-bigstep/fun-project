@@ -73,6 +73,10 @@
     const maxGapShift = 250; // max vertical shift of gap between consecutive pipes
     let lastPipeTopHeight = null;
 
+    // Game state: 'idle', 'playing', 'gameover'
+    let gameState = 'idle';
+    let score = 0;
+
     // Track loaded assets
     let assetsLoaded = 0;
     const totalAssets = 3;
@@ -88,11 +92,28 @@
     birdImg.onload = onAssetLoad;
     obstacleImg.onload = onAssetLoad;
 
+    function resetGame() {
+      bird.y = canvas.height / 2;
+      bird.velocity = 0;
+      pipes.length = 0;
+      lastPipeTopHeight = null;
+      score = 0;
+    }
+
     // Input
     document.addEventListener('keydown', (e) => {
       if (e.code === 'Space') {
         e.preventDefault();
-        bird.velocity = bird.flapStrength;
+        if (gameState === 'idle') {
+          gameState = 'playing';
+          bird.velocity = bird.flapStrength;
+        } else if (gameState === 'playing') {
+          bird.velocity = bird.flapStrength;
+        } else if (gameState === 'gameover') {
+          resetGame();
+          gameState = 'playing';
+          bird.velocity = bird.flapStrength;
+        }
       }
     });
 
@@ -120,16 +141,48 @@
       });
     }
 
+    function checkCollision() {
+      // Hit floor or ceiling
+      if (bird.y <= 0 || bird.y + bird.height >= canvas.height) {
+        return true;
+      }
+
+      // Hit a pipe
+      for (const pipe of pipes) {
+        const birdRight = bird.x + bird.width;
+        const birdBottom = bird.y + bird.height;
+        const pipeRight = pipe.x + pipeWidth;
+
+        // Check horizontal overlap
+        if (birdRight > pipe.x && bird.x < pipeRight) {
+          // Check if bird is inside the gap
+          if (bird.y < pipe.topHeight || birdBottom > pipe.bottomY) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
     function update(timestamp) {
+      if (gameState !== 'playing') return;
+
       // Spawn pipe if no pipes yet or last pipe is far enough away
       const lastPipe = pipes[pipes.length - 1];
       if (!lastPipe || lastPipe.x < canvas.width - pipeMinDistance) {
         spawnPipe();
       }
 
-      // Move pipes left
+      // Move pipes left and track score
       for (let i = pipes.length - 1; i >= 0; i--) {
         pipes[i].x -= pipeSpeed;
+
+        // Score when bird passes a pipe
+        if (!pipes[i].scored && pipes[i].x + pipeWidth < bird.x) {
+          pipes[i].scored = true;
+          score++;
+        }
+
         // Remove pipes that have gone off screen
         if (pipes[i].x + pipeWidth < 0) {
           pipes.splice(i, 1);
@@ -140,7 +193,7 @@
       bird.velocity += bird.gravity;
       bird.y += bird.velocity;
 
-      // Keep bird within screen bounds
+      // Clamp bird position
       if (bird.y < 0) {
         bird.y = 0;
         bird.velocity = 0;
@@ -148,6 +201,11 @@
       if (bird.y + bird.height > canvas.height) {
         bird.y = canvas.height - bird.height;
         bird.velocity = 0;
+      }
+
+      // Check collisions
+      if (checkCollision()) {
+        gameState = 'gameover';
       }
     }
 
@@ -176,6 +234,34 @@
       ctx.rotate(rotation);
       ctx.drawImage(birdImg, -bird.width / 2, -bird.height / 2, bird.width, bird.height);
       ctx.restore();
+
+      // Draw score
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 4;
+      ctx.font = 'bold 48px Arial';
+      ctx.textAlign = 'center';
+      ctx.strokeText(score, canvas.width / 2, 60);
+      ctx.fillText(score, canvas.width / 2, 60);
+
+      // Draw state messages
+      if (gameState === 'idle') {
+        ctx.font = 'bold 36px Arial';
+        ctx.strokeText('Press SPACE to Start', canvas.width / 2, canvas.height / 2 + 60);
+        ctx.fillText('Press SPACE to Start', canvas.width / 2, canvas.height / 2 + 60);
+      } else if (gameState === 'gameover') {
+        ctx.font = 'bold 52px Arial';
+        ctx.fillStyle = '#ff4444';
+        ctx.strokeText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
+        ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 30px Arial';
+        ctx.strokeText('Score: ' + score, canvas.width / 2, canvas.height / 2 + 30);
+        ctx.fillText('Score: ' + score, canvas.width / 2, canvas.height / 2 + 30);
+        ctx.font = 'bold 24px Arial';
+        ctx.strokeText('Press SPACE to Restart', canvas.width / 2, canvas.height / 2 + 75);
+        ctx.fillText('Press SPACE to Restart', canvas.width / 2, canvas.height / 2 + 75);
+      }
     }
 
     function gameLoop(timestamp) {
