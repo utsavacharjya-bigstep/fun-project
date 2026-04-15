@@ -49,6 +49,9 @@
     const birdImg = new Image();
     birdImg.src = 'bird.jpg';
 
+    const obstacleImg = new Image();
+    obstacleImg.src = 'obstacle.jpeg';
+
     // Bird properties
     const bird = {
       x: 150,
@@ -56,13 +59,22 @@
       width: 45,
       height: 35,
       velocity: 0,
-      gravity: 0.5,
-      flapStrength: -16
+      gravity: 0.3,
+      flapStrength: -10
     };
+
+    // Pipe properties
+    const pipes = [];
+    const pipeWidth = 70;
+    const pipeGapMin = 200;
+    const pipeGapMax = 300;
+    const pipeSpeed = 3;
+    const pipeSpawnInterval = 1800; // ms between pipe spawns
+    let lastPipeSpawn = 0;
 
     // Track loaded assets
     let assetsLoaded = 0;
-    const totalAssets = 2;
+    const totalAssets = 3;
 
     function onAssetLoad() {
       assetsLoaded++;
@@ -73,6 +85,7 @@
 
     bgImg.onload = onAssetLoad;
     birdImg.onload = onAssetLoad;
+    obstacleImg.onload = onAssetLoad;
 
     // Input
     document.addEventListener('keydown', (e) => {
@@ -82,7 +95,37 @@
       }
     });
 
-    function update() {
+    function spawnPipe(timestamp) {
+      // Random gap position — keep it away from edges
+      const gap = Math.random() * (pipeGapMax - pipeGapMin) + pipeGapMin;
+      const minTop = 80;
+      const maxTop = canvas.height - gap - 80;
+      const topHeight = Math.random() * (maxTop - minTop) + minTop;
+
+      pipes.push({
+        x: canvas.width,
+        topHeight: topHeight,
+        bottomY: topHeight + gap
+      });
+
+      lastPipeSpawn = timestamp;
+    }
+
+    function update(timestamp) {
+      // Spawn pipes at intervals
+      if (timestamp - lastPipeSpawn > pipeSpawnInterval) {
+        spawnPipe(timestamp);
+      }
+
+      // Move pipes left
+      for (let i = pipes.length - 1; i >= 0; i--) {
+        pipes[i].x -= pipeSpeed;
+        // Remove pipes that have gone off screen
+        if (pipes[i].x + pipeWidth < 0) {
+          pipes.splice(i, 1);
+        }
+      }
+
       // Apply gravity
       bird.velocity += bird.gravity;
       bird.y += bird.velocity;
@@ -102,6 +145,20 @@
       // Draw background scaled to canvas
       ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
 
+      // Draw pipes
+      for (const pipe of pipes) {
+        // Top pipe (flipped vertically)
+        ctx.save();
+        ctx.translate(pipe.x + pipeWidth / 2, pipe.topHeight / 2);
+        ctx.scale(1, -1);
+        ctx.drawImage(obstacleImg, -pipeWidth / 2, -pipe.topHeight / 2, pipeWidth, pipe.topHeight);
+        ctx.restore();
+
+        // Bottom pipe
+        const bottomHeight = canvas.height - pipe.bottomY;
+        ctx.drawImage(obstacleImg, pipe.x, pipe.bottomY, pipeWidth, bottomHeight);
+      }
+
       // Draw bird with rotation based on velocity
       ctx.save();
       ctx.translate(bird.x + bird.width / 2, bird.y + bird.height / 2);
@@ -111,8 +168,8 @@
       ctx.restore();
     }
 
-    function gameLoop() {
-      update();
+    function gameLoop(timestamp) {
+      update(timestamp);
       draw();
       requestAnimationFrame(gameLoop);
     }
