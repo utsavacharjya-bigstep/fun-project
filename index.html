@@ -51,10 +51,13 @@
 
     // Bird properties
     const bird = {
-      x: 100,
+      x: 150,
       y: canvas.height / 2,
       width: 45,
-      height: 35
+      height: 35,
+      velocity: 0,
+      gravity: 0.5,
+      flapStrength: -16
     };
 
     // Track loaded assets
@@ -64,19 +67,54 @@
     function onAssetLoad() {
       assetsLoaded++;
       if (assetsLoaded >= totalAssets) {
-        draw();
+        gameLoop();
       }
     }
 
     bgImg.onload = onAssetLoad;
     birdImg.onload = onAssetLoad;
 
+    // Input
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        bird.velocity = bird.flapStrength;
+      }
+    });
+
+    function update() {
+      // Apply gravity
+      bird.velocity += bird.gravity;
+      bird.y += bird.velocity;
+
+      // Keep bird within screen bounds
+      if (bird.y < 0) {
+        bird.y = 0;
+        bird.velocity = 0;
+      }
+      if (bird.y + bird.height > canvas.height) {
+        bird.y = canvas.height - bird.height;
+        bird.velocity = 0;
+      }
+    }
+
     function draw() {
       // Draw background scaled to canvas
       ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
 
-      // Draw bird
-      ctx.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
+      // Draw bird with rotation based on velocity
+      ctx.save();
+      ctx.translate(bird.x + bird.width / 2, bird.y + bird.height / 2);
+      const rotation = Math.max(-0.5, Math.min(bird.velocity * 0.05, 0.5));
+      ctx.rotate(rotation);
+      ctx.drawImage(birdImg, -bird.width / 2, -bird.height / 2, bird.width, bird.height);
+      ctx.restore();
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
     }
   </script>
 </body>
