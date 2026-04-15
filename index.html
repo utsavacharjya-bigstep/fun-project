@@ -52,6 +52,14 @@
     const obstacleImg = new Image();
     obstacleImg.src = 'obstacle.jpeg';
 
+    // Audio
+    const bgMusic = new Audio('bgmusic.mp3');
+    bgMusic.loop = true;
+    bgMusic.volume = 0.4;
+
+    const hitSound = new Audio('hit.mp3');
+    hitSound.volume = 0.7;
+
     // Bird properties
     const bird = {
       x: 150,
@@ -107,12 +115,16 @@
         if (gameState === 'idle') {
           gameState = 'playing';
           bird.velocity = bird.flapStrength;
+          bgMusic.currentTime = 0;
+          bgMusic.play();
         } else if (gameState === 'playing') {
           bird.velocity = bird.flapStrength;
         } else if (gameState === 'gameover') {
           resetGame();
           gameState = 'playing';
           bird.velocity = bird.flapStrength;
+          bgMusic.currentTime = 0;
+          bgMusic.play();
         }
       }
     });
@@ -206,6 +218,9 @@
       // Check collisions
       if (checkCollision()) {
         gameState = 'gameover';
+        bgMusic.pause();
+        hitSound.currentTime = 0;
+        hitSound.play();
       }
     }
 
